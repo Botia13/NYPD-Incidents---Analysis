@@ -1,0 +1,94 @@
+---
+title: "NYPD - Data Analysis"
+author: "David Forero Botia"
+date: "2024-02-03"
+output:
+  word_document: default
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(lubridate)
+library(dplyr)
+library(hms)
+library(ggplot2)
+```
+
+## Importing the Data
+To import the data we will use the following code that download the data directly from the official page, this allowing that anyone with the Rmarkdown can download the data.
+ 
+
+```{r cars}
+nypd_data<-read.csv('https://data.cityofnewyork.us/api/views/833y-fsy8/rows.csv?accessType=DOWNLOAD')
+```
+The data look like this:
+
+```{r summaryData, echo=FALSE}
+summary(nypd_data)
+```
+## Cleaning the Data
+
+The data will be clean with these steps:
+
+1. Changing the corresponding columns to its correct data type.
+```{r first}
+nypd_data$OCCUR_DATE<-as.Date(nypd_data$OCCUR_DATE, , format = "%m/%d/%Y")
+nypd_data$OCCUR_TIME <- as_hms(nypd_data$OCCUR_TIME)
+nypd_data$STATISTICAL_MURDER_FLAG<- as.logical(nypd_data$STATISTICAL_MURDER_FLAG)
+```
+2. Deleting the columns that I will not use for the analysis
+```{r Second}
+nypd_data<- subset(nypd_data, select=c('OCCUR_DATE','OCCUR_TIME','LOCATION_DESC','STATISTICAL_MURDER_FLAG','PERP_AGE_GROUP','PERP_SEX','PERP_RACE','VIC_AGE_GROUP','VIC_SEX','VIC_RACE'))
+```
+
+The data at the end will look like this:
+```{r clean_data, echo=FALSE}
+summary(nypd_data)
+```
+
+
+
+
+## Analyzing the Data
+
+We can see the top 10 locations where have been any incident:
+
+```{r first_viz, echo=FALSE}
+locations_counts<-table(nypd_data$LOCATION_DESC)
+locations_df<-as.data.frame(locations_counts)
+sorted_locations <- locations_df[order(-locations_df$Freq), ]
+
+filtered_locations <- sorted_locations %>%
+  filter(Var1 != '(null)' & Var1 != 'NONE'  & Var1 != '') %>%
+  head(10)
+
+barplot(filtered_locations$Freq, names.arg = filtered_locations$Var1, col = "gray", main = "Top 10 Locations",  ylab = "Frequency", las = 2,,cex.names = 0.4)
+
+mtext(side = 1, line = 6, text = "Location Names", cex = 0.8)
+```
+
+Here we can see that the most frequent places for these incidents are in houses or apartments, and less than half are elsewhere.
+
+Also, below we show the sex of the perpetrator against the sex of the victim:
+```{r second_viz, echo=FALSE}
+nypd_data%>%
+  filter(PERP_SEX!='' & PERP_SEX!='(null)' & VIC_SEX!='' & VIC_SEX!='(null)' )%>%
+  ggplot(aes(PERP_SEX,VIC_SEX))+geom_count()
+```
+
+Here we can see that the most common perpetrators are Men and these attacks most of the time are to other men, also we can see that men have more attacks on women than women against both sexes.
+
+
+## Conclusion
+
+This data has been really useful in showing some historical data related to incidents, where we dive into different patterns that have been observed, and that we can quantify them, for example, the most usual locations for an incident to occur that we notice are the Homes, or the relationship between the perpetrator and victim genders. Although this was an exercise where we can make conclusions of the past we can not predict the future based on this historical data. 
+
+### Bias
+We have to look very carefully for bias in this dataset, specifically because it shows data with so much weight in our day-to-day. For example, we can not conclude that a man has a higher profile as a perpetrator, instead, we should think that this data can not predict the future type of perpetrator and is just a form to show historical data. 
+
+Another example is the type of race with more incidents related, this doesn't mean that this race has a higher probability to do a murder, instead, we will need to have more sociopolitical data that allows us to get to the bottom of the issue, and find the real root of this problematic, something that we can not display with the amount of data we have available right now.
+
+
